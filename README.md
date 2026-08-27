@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/FasterEdge/NetMap/main/logo.png" alt="NetMap" width="120"/>  
+  <img src="Logo.png" alt="NetMap" width="120"/>  
   <h2>NetMap</h2>
   <h3>FasterEdge 网络拓扑管理器</h3>
 </div>
