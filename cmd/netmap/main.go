@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 · https://github.com/FasterEdge · https://gitee.com/FasterEdge
 // netmap 是一个独立运行的、带 Web 前端的网络拓扑管理器。
 // 它接收 FasterEdge 节点的 NetMapAbility 上报,并在浏览器中渲染网络拓扑。
 //
