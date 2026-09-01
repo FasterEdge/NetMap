@@ -98,6 +98,10 @@ type Store struct {
 	pending Provider
 	timer   *time.Timer
 
+	// saveMu 串行化所有实际写盘(saveNow),使 fire() / Save() / Flush()
+	// 不会并发重命名,避免 Windows 上 rename 与 reader 互相阻塞。
+	saveMu sync.Mutex
+
 	lastSavedAt time.Time
 	lastErr     error
 }
@@ -162,7 +166,8 @@ func (s *Store) Schedule(p Provider) {
 }
 
 // Flush writes any pending snapshot synchronously. If no save is pending,
-// it returns nil without writing.
+// it still waits for a save already in flight (from a debounce timer) so
+// callers can rely on the file being up to date when Flush returns.
 func (s *Store) Flush() error {
 	s.mu.Lock()
 	p := s.pending
@@ -172,10 +177,14 @@ func (s *Store) Flush() error {
 	}
 	s.pending = nil
 	s.mu.Unlock()
-	if p == nil {
-		return nil
+	if p != nil {
+		return s.saveNow(p)
 	}
-	return s.saveNow(p)
+	// 没有待保存的 provider,但一个 timer 触发的保存可能正在写盘。
+	// 短暂持有 saveMu 等它完成,保证 Flush 返回后磁盘状态是最新的。
+	s.saveMu.Lock()
+	s.saveMu.Unlock()
+	return nil
 }
 
 // Save writes immediately, ignoring any pending debounced save. It is
@@ -213,6 +222,8 @@ func (s *Store) fire() {
 }
 
 func (s *Store) saveNow(p Provider) error {
+	s.saveMu.Lock()
+	defer s.saveMu.Unlock()
 	env, err := p()
 	if err != nil {
 		return err
@@ -287,7 +298,32 @@ func (s *Store) writeAtomic(env *Envelope) error {
 // bounded to the configured maxLoadBytes. Unknown major versions are
 // rejected with a clear error. A missing file is reported as a regular
 // os.PathError so callers can decide whether "first run" is fatal.
+//
+// On Windows, an atomic rename in writeAtomic can transiently block a
+// concurrent open of the target file (ERROR_SHARING_VIOLATION /
+// ERROR_ACCESS_DENIED). Load retries such transient open failures a bounded
+// number of times so readers observe either the old or the new file, never a
+// torn or missing one.
 func (s *Store) Load() (Envelope, error) {
+	const maxOpenRetries = 20
+	const openRetryDelay = 2 * time.Millisecond
+
+	var lastErr error
+	for attempt := 0; attempt < maxOpenRetries; attempt++ {
+		env, err := s.loadOnce()
+		if err == nil {
+			return env, nil
+		}
+		lastErr = err
+		if !isRetryableOpenError(err) {
+			return Envelope{}, err
+		}
+		time.Sleep(openRetryDelay)
+	}
+	return Envelope{}, lastErr
+}
+
+func (s *Store) loadOnce() (Envelope, error) {
 	if s.path == "" {
 		return Envelope{}, errors.New("snapshot: path is empty")
 	}
