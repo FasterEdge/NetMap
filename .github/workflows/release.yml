@@ -43,7 +43,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: 'netmap-${{ matrix.target }}'
-        path: 'netmap-${{ matrix.target }}.tar.gz'
+        path: '${{ github.workspace }}/netmap-${{ matrix.target }}.*'
         if-no-files-found: 'error'
         retention-days: 1
 
