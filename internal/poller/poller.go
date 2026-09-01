@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────
+// FasterEdge 开源项目
+// Github: https://github.com/FasterEdge
+// Gitee:  https://gitee.com/FasterEdge
+// ─────────────────────────────────────────────────────────────
 // Package poller implements the bounded concurrent worker pool that drives
 // topology refreshes. Each registered source gets its own scheduled run,
 // jitter is added to spread load, and per-source invocations never

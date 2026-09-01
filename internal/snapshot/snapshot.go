@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────
+// FasterEdge 开源项目
+// Github: https://github.com/FasterEdge
+// Gitee:  https://gitee.com/FasterEdge
+// ─────────────────────────────────────────────────────────────
 // Package snapshot provides atomic, versioned JSON persistence for the
 // NetMap topology store. It is pure Go (no cgo, no SQLite), writes with
 // 0600 file perms, debounces frequent saves, and rejects unknown major

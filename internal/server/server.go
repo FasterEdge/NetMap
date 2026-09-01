@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────
+// FasterEdge 开源项目
+// Github: https://github.com/FasterEdge
+// Gitee:  https://gitee.com/FasterEdge
+// ─────────────────────────────────────────────────────────────
 // Package server implements the NetMap HTTP control plane. It owns a real
 // *http.Server with explicit timeouts, ingests topology POSTs from
 // authenticated FasterEdge nodes and serves read-only APIs to the web UI.

@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────
+// FasterEdge 开源项目
+// Github: https://github.com/FasterEdge
+// Gitee:  https://gitee.com/FasterEdge
+// ─────────────────────────────────────────────────────────────
 // Package store 提供拓扑数据的内存存储,等价于 FasterEdge 的 NetMapData + NetMapAbility。
 package store
 
