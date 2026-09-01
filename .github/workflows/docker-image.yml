@@ -1,0 +1,23 @@
+name: 'Docker 镜像构建'
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: '构建 Docker 镜像'
+      run: |
+        docker build -t netmap .
+    - name: '导出并上传镜像工件'
+      run: |
+        docker save netmap | gzip > netmap-image.tar.gz
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'netmap-docker-image-${{ github.ref_name }}'
+        path: 'netmap-image.tar.gz'
+        if-no-files-found: 'warn'
+        retention-days: 14
