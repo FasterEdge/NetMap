@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // Package config owns CLI flag parsing. It is split out from main so the
 // arguments can be exercised directly in tests without spawning a child
 // process.

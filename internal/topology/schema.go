@@ -1,3 +1,4 @@
+// FasterEdge 开源项目 - Github: https://github.com/FasterEdge - Gitee: https://gitee.com/FasterEdge
 // Package topology defines the wire format used by FasterEdge nodes when they
 // publish a network topology snapshot. The schema is intentionally
 // versioned so that NetMap can negotiate an upgrade without losing older
