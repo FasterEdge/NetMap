@@ -24,7 +24,7 @@ jobs:
     - name: '导出并上传镜像工件'
       run: |
         docker save netmap | gzip > netmap-image.tar.gz
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: 'netmap-docker-image-${{ github.ref_name }}'
         path: 'netmap-image.tar.gz'
