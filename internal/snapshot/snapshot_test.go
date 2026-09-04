@@ -241,6 +241,9 @@ func TestAtomicReplacePreservesOldFile(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("chmod perms are not POSIX on Windows")
 	}
+	if os.Geteuid() == 0 {
+		t.Skip("chmod write-protection does not apply to root")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "snap.json")
 	s, err := New(path, time.Millisecond, 0)
