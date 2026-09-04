@@ -152,7 +152,7 @@ func (p *Poller) Run(ctx context.Context) error {
 			}
 		}
 		// Sleep until the next source's tick (or cancellation).
-		if !p.sleep(1, p.cfg.Interval) {
+		if !p.sleep(ctx, p.cfg.Interval) {
 			p.wg.Wait()
 			return nil
 		}
@@ -194,7 +194,7 @@ func (p *Poller) schedule(ctx context.Context, src source.Source, sem chan struc
 
 // runOnce performs a single fetch + receive cycle with jitter.
 func (p *Poller) runOnce(ctx context.Context, src source.Source) {
-	if !p.sleep(1, jitter(p.cfg.Jitter)) {
+	if !p.sleep(ctx, jitter(p.cfg.Jitter)) {
 		return
 	}
 	prov, ok := p.reg.Get(src.Name())
@@ -221,7 +221,10 @@ func (p *Poller) runOnce(ctx context.Context, src source.Source) {
 func (p *Poller) snapshot() []source.Provenance {
 	return p.reg.Snapshot()
 }
-func (p *Poller) sleep(workers int, d time.Duration) bool {
+// sleep blocks for d (or until ctx is cancelled, returning false).
+// A non-positive d returns immediately with true so tests and zero-value
+// configs keep working.
+func (p *Poller) sleep(ctx context.Context, d time.Duration) bool {
 	if d <= 0 {
 		return true
 	}
@@ -230,9 +233,9 @@ func (p *Poller) sleep(workers int, d time.Duration) bool {
 	select {
 	case <-timer.C:
 		return true
-	default:
+	case <-ctx.Done():
+		return false
 	}
-	return true
 }
 
 // jitter returns a uniformly random duration in [0, max). The math is

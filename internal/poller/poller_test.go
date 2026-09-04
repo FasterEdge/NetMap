@@ -385,6 +385,41 @@ func TestPollerSkipsCancelledContext(t *testing.T) {
 	}
 }
 
+// 回归: sleep 必须真正等待 Interval, 否则 Run 主循环忙轮询 (100% CPU)
+// 且每轮调度所有源 — 修复前 sleep 带 default 分支永不阻塞,
+// 300ms 内 hits 会达到数千次。
+func TestPollerRespectsInterval(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.Write([]byte(`{"version":"1","self":{"nodeName":"x"},"peers":[]}`))
+	}))
+	defer srv.Close()
+
+	r := newRegistry(t, srv.URL)
+	cfg := Config{
+		HTTPClient:       &http.Client{Timeout: 2 * time.Second},
+		Interval:         100 * time.Millisecond,
+		Jitter:           0,
+		MaxResponseBytes: 1024,
+		Workers:          1,
+	}
+	p, err := New(r, cfg, HTTPFetcher(cfg), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
+	defer cancel()
+	_ = p.Run(ctx)
+	// 100ms 间隔 × ~350ms 窗口 → 至多 4~5 次; 忙循环会远超此数。
+	if hits.Load() > 6 {
+		t.Fatalf("hits = %d, want <= 6 (sleep not blocking?)", hits.Load())
+	}
+	if hits.Load() < 2 {
+		t.Fatalf("hits = %d, want >= 2", hits.Load())
+	}
+}
+
 // helpers — local to this test file so we don't pull in bytes/strings.
 func bytesRepeat(s string, n int) []byte {
 	out := make([]byte, 0, len(s)*n)
