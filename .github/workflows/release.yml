@@ -40,7 +40,7 @@ jobs:
         else
           tar czf ../netmap-${{ matrix.target }}.tar.gz netmap
         fi
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: 'netmap-${{ matrix.target }}'
         path: '${{ github.workspace }}/netmap-${{ matrix.target }}.*'
