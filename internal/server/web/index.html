@@ -52,6 +52,16 @@ main{flex:1;display:flex;overflow:hidden}
 </main>
 <script>
 const API='/api';let topology=null,autoInterval=null;
+// XSS 防护: 所有来自服务端拓扑数据的插值必须经 esc 转义后再拼接 innerHTML,
+// 否则恶意对端名/地址/接口数据可注入任意脚本(存储型 XSS)。
+function esc(v){
+  return String(v)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 async function refresh(){
   const st=document.getElementById('status');st.textContent='...';
   try{
@@ -82,30 +92,30 @@ function renderTopology(t){
     if(!sn||!dn)return;
     var mx=(sn.x+dn.x)/2,my=(sn.y+dn.y)/2-14;
     s+='<line class="link" x1="'+sn.x+'" y1="'+sn.y+'" x2="'+dn.x+'" y2="'+dn.y+'"/>'+
-       '<text class="link-label" x="'+mx+'" y="'+my+'" text-anchor="middle">'+l.label+'</text>';
+       '<text class="link-label" x="'+mx+'" y="'+my+'" text-anchor="middle">'+esc(l.label)+'</text>';
   });
   var sn=nodes[0];
   s+='<g><circle cx="'+sn.x+'" cy="'+sn.y+'" r="28" fill="#1e293b" stroke="#818cf8" stroke-width="2.5"/>'+
      '<text x="'+sn.x+'" y="'+(sn.y+4)+'" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="600">本机</text>'+
-     '<text x="'+sn.x+'" y="'+(sn.y+44)+'" text-anchor="middle" fill="#818cf8" font-size="11">'+sn.label+'</text></g>';
+     '<text x="'+sn.x+'" y="'+(sn.y+44)+'" text-anchor="middle" fill="#818cf8" font-size="11">'+esc(sn.label)+'</text></g>';
   peers.forEach(function(p,i){
     var n=nodes[i+1];if(!n)return;
     var col=p.role==='cloud'?'#38bdf8':p.role==='edge'?'#4ade80':'#94a3b8';
     s+='<g><circle cx="'+n.x+'" cy="'+n.y+'" r="20" fill="#1e293b" stroke="'+col+'" stroke-width="2"/>'+
-       '<text x="'+n.x+'" y="'+(n.y+4)+'" text-anchor="middle" fill="'+col+'" font-size="10" font-weight="500">'+n.id+'</text></g>';
+       '<text x="'+n.x+'" y="'+(n.y+4)+'" text-anchor="middle" fill="'+col+'" font-size="10" font-weight="500">'+esc(n.id)+'</text></g>';
   });
   s+='</svg>';c.innerHTML=s;
 }
 function renderSidebar(t){
   var body=document.getElementById('sidebarBody'),self=t.self||{},peers=t.peers||[],h='';
-  h+='<div class="self-card"><div class="name">'+(self.nodeName||'本节点')+'</div>'+
-     (self.defaultIface?'<div class="detail">默认接口: '+self.defaultIface+'</div>':'')+
-     (self.interfaces||[]).map(function(i){return '<div class="iface-item">'+i.name+' · '+(i.ipv4||[]).join(', ')+'</div>';}).join('')+
+  h+='<div class="self-card"><div class="name">'+esc(self.nodeName||'本节点')+'</div>'+
+     (self.defaultIface?'<div class="detail">默认接口: '+esc(self.defaultIface)+'</div>':'')+
+     (self.interfaces||[]).map(function(i){return '<div class="iface-item">'+esc(i.name)+' · '+esc((i.ipv4||[]).join(', '))+'</div>';}).join('')+
      '<div class="detail" style="margin-top:4px;font-size:11px;color:var(--green)">● 本机</div></div>';
   peers.forEach(function(p){
-    h+='<div class="peer-card"><div class="name">'+p.name+'</div><div class="addr">'+p.address+'</div>'+
-       (p.role?'<span class="role">'+p.role+'</span>':'')+
-       (p.lastSeen?'<div class="time">最后可见: '+new Date(p.lastSeen).toLocaleTimeString()+'</div>':'')+'</div>';
+    h+='<div class="peer-card"><div class="name">'+esc(p.name)+'</div><div class="addr">'+esc(p.address)+'</div>'+
+       (p.role?'<span class="role">'+esc(p.role)+'</span>':'')+
+       (p.lastSeen?'<div class="time">最后可见: '+esc(new Date(p.lastSeen).toLocaleTimeString())+'</div>':'')+'</div>';
   });
   body.innerHTML=h||'<div style="padding:24px;text-align:center;color:var(--dim)">暂无</div>';
 }
