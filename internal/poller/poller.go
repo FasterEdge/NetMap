@@ -221,6 +221,7 @@ func (p *Poller) runOnce(ctx context.Context, src source.Source) {
 func (p *Poller) snapshot() []source.Provenance {
 	return p.reg.Snapshot()
 }
+
 // sleep blocks for d (or until ctx is cancelled, returning false).
 // A non-positive d returns immediately with true so tests and zero-value
 // configs keep working.
