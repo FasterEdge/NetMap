@@ -89,6 +89,12 @@ func New(reg *source.Registry, cfg Config, fetch Fetcher, recv Receiver, onErr E
 	if cfg.HTTPClient == nil {
 		return nil, errors.New("poller: HTTPClient is required")
 	}
+	// Timeout==0 是 Go 的"无超时"零值, 但 runOnce 用 WithTimeout(ctx, HTTPClient.Timeout)
+	// 派生 fetch 上下文: WithTimeout(ctx, 0) 会立即取消, 导致所有 poll 静默失败且无任何报错。
+	// 这里 fail-safe 设置默认 30s, 避免调用方漏配 Timeout 时功能全挂还难以排查。
+	if cfg.HTTPClient.Timeout <= 0 {
+		cfg.HTTPClient.Timeout = 30 * time.Second
+	}
 	if cfg.Interval <= 0 {
 		cfg.Interval = 30 * time.Second
 	}
@@ -303,14 +309,3 @@ func Bound(d, min, max time.Duration) time.Duration {
 		return d
 	}
 }
-
-// mathAbs is a tiny helper kept here so we do not need to add math
-// imports elsewhere in the package.
-func mathAbs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-var _ = mathAbs
