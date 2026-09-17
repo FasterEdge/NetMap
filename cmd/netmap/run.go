@@ -14,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -121,28 +120,15 @@ func run(ctx context.Context, prog string, args []string, logger *log.Logger) er
 			MaxIdleConns:        32,
 			MaxIdleConnsPerHost: 4,
 			IdleConnTimeout:     90 * time.Second,
-			// DNS 重绑定防御: hostname 在 Validate 时不解析, 若解析后落入
-			// 私网/回环/link-local/multicast 则在拨号前拒绝(补齐注释承诺的
-			// "defer IP-class checks to DNS time")。
+			// DNS 重绑定 + redirect 绕过防御: 每次拨号(含 redirect 目标)都做
+			// IP-class 检查(逻辑集中在 source.ValidationPolicy.CheckDialHost)。
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				host, _, err := net.SplitHostPort(addr)
 				if err != nil {
 					return nil, err
 				}
-				// IP literal 已在 Validate 阶段被 classifyIP 拒绝; 仅对
-				// hostname 做解析后检查(AllowedHosts 白名单命中则跳过)。
-				if net.ParseIP(host) == nil && cfg.Policy.AllowedHosts != nil {
-					if _, ok := cfg.Policy.AllowedHosts[strings.ToLower(host)]; !ok {
-						ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
-						if err != nil {
-							return nil, err
-						}
-						for _, ia := range ips {
-							if reason := cfg.Policy.CheckResolvedIP(ia.IP); reason != "" {
-								return nil, fmt.Errorf("resolved address %s denied (%s)", ia.IP, reason)
-							}
-						}
-					}
+				if err := cfg.Policy.CheckDialHost(ctx, host); err != nil {
+					return nil, err
 				}
 				return (&net.Dialer{}).DialContext(ctx, network, addr)
 			},
