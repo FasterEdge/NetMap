@@ -123,14 +123,16 @@ func run(ctx context.Context, prog string, args []string, logger *log.Logger) er
 			// DNS 重绑定 + redirect 绕过防御: 每次拨号(含 redirect 目标)都做
 			// IP-class 检查(逻辑集中在 source.ValidationPolicy.CheckDialHost)。
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				host, _, err := net.SplitHostPort(addr)
+				host, port, err := net.SplitHostPort(addr)
 				if err != nil {
 					return nil, err
 				}
-				if err := cfg.Policy.CheckDialHost(ctx, host); err != nil {
+				// 解析 + 校验后 pin IP 拨号(防 DNS 重绑定二次解析绕过)
+				dialAddr, err := cfg.Policy.ResolveDialAddr(ctx, host, port)
+				if err != nil {
 					return nil, err
 				}
-				return (&net.Dialer{}).DialContext(ctx, network, addr)
+				return (&net.Dialer{}).DialContext(ctx, network, dialAddr)
 			},
 		},
 	}
