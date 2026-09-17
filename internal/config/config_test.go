@@ -13,7 +13,7 @@ func TestParseDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Addr != ":8080" {
+	if cfg.Addr != "127.0.0.1:8080" {
 		t.Fatalf("addr = %q", cfg.Addr)
 	}
 	if cfg.Name != "netmap-hub" {

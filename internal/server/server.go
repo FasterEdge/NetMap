@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -73,7 +74,7 @@ type Config struct {
 // DefaultConfig returns a Config with safe production defaults.
 func DefaultConfig() Config {
 	return Config{
-		Addr:              ":8080",
+		Addr:              "127.0.0.1:8080",
 		MaxIngestBytes:    4 << 20, // 4 MiB
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -167,6 +168,11 @@ func (s *Server) Serve(ctx context.Context) error {
 	s.routes()
 	s.httpServer = s.buildHTTPServer()
 	log.Printf("NetMap listening on %s", s.addr)
+	if host, _, err := net.SplitHostPort(s.addr); err == nil {
+		if host != "" && host != "127.0.0.1" && host != "::1" && host != "localhost" {
+			log.Printf("警告: 监听地址 %s 非回环, 读接口(/api/topology、/api/peers、/api/self、/api/v1/sources)无鉴权, 拓扑数据将对所在网络所有主机可见; 生产环境请置于反向代理鉴权之后或改用回环监听", s.addr)
+		}
+	}
 	errCh := make(chan error, 1)
 	go func() {
 		err := s.httpServer.ListenAndServe()

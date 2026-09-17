@@ -20,7 +20,7 @@ import (
 // the starting point for both CLI and test invocations.
 func Defaults() Config {
 	return Config{
-		Addr:              ":8080",
+		Addr:              "127.0.0.1:8080",
 		AllowOrigin:       "",
 		Name:              "netmap-hub",
 		PollInterval:      30 * time.Second,
