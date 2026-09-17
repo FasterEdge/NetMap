@@ -2,6 +2,7 @@ package source
 
 import (
 	"errors"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -99,6 +100,29 @@ func TestPolicyAllowListOverridesDefaults(t *testing.T) {
 	// A different host should still be rejected for being loopback.
 	if _, err := policy.Validate("http://127.0.0.1:7000"); err == nil {
 		t.Fatal("expected deny for non-allowlisted loopback")
+	}
+}
+
+func TestPolicyCheckResolvedIP(t *testing.T) {
+	p := DefaultPolicy()
+	for _, tc := range []struct {
+		ip     string
+		reason DisallowReason
+	}{
+		{"10.0.0.1", ReasonPrivate},
+		{"127.0.0.1", ReasonLoopback},
+		{"169.254.169.254", ReasonLinkLocal},
+		{"239.0.0.1", ReasonMulticast},
+	} {
+		if reason := p.CheckResolvedIP(net.ParseIP(tc.ip)); reason != tc.reason {
+			t.Fatalf("CheckResolvedIP(%s) = %v, want %v", tc.ip, reason, tc.reason)
+		}
+	}
+	if reason := p.CheckResolvedIP(net.ParseIP("8.8.8.8")); reason != "" {
+		t.Fatalf("public IP denied: %v", reason)
+	}
+	if reason := PermissivePolicy().CheckResolvedIP(net.ParseIP("10.0.0.1")); reason != "" {
+		t.Fatalf("permissive denied private: %v", reason)
 	}
 }
 
