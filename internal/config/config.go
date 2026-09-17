@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -80,7 +81,13 @@ func Parse(name string, fs *flag.FlagSet, args []string, out io.Writer) (Config,
 	fs.StringVar(&cfg.AllowOrigin, "origin", cfg.AllowOrigin, "CORS allow-origin (empty = disabled, '*' = all)")
 	fs.StringVar(&cfg.Name, "name", cfg.Name, "node name shown as self")
 	fs.Var(&rawRemotes, "node", "FasterEdge node to poll: name=baseURL (repeatable)")
-	fs.StringVar(&cfg.IngestToken, "ingest-token", cfg.IngestToken, "bearer token required on POST /api/v1/topology (empty disables endpoint)")
+	// ingest-token 优先取命令行, 未显式配置时回退环境变量 NETMAP_INGEST_TOKEN,
+	// 避免密钥经 -ingest-token 明文出现在进程列表(ps 可见)。
+	ingestToken := cfg.IngestToken
+	if v := os.Getenv("NETMAP_INGEST_TOKEN"); v != "" {
+		ingestToken = v
+	}
+	fs.StringVar(&cfg.IngestToken, "ingest-token", ingestToken, "bearer token required on POST /api/v1/topology (empty disables endpoint); falls back to NETMAP_INGEST_TOKEN env var")
 	fs.BoolVar(&cfg.Policy.AllowPrivate, "allow-private-nodes", false, "permit loopback / RFC1918 / link-local / multicast sources (dev only)")
 	fs.DurationVar(&cfg.PollInterval, "poll-interval", cfg.PollInterval, "polling interval per source")
 	fs.DurationVar(&cfg.PollJitter, "poll-jitter", cfg.PollJitter, "maximum random jitter added to each poll")
