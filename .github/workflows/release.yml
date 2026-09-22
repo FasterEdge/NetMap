@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types: [published, released]
 
 permissions:
   contents: write
@@ -64,9 +66,19 @@ jobs:
             *.tar.gz|*.zip) cp "$f" release/ ;;
           esac
         done
+    - name: '生成 MD5/SHA1 校验文件'
+      run: |
+        set -euo pipefail
+        cd release
+        find . -type f ! -name 'checksums-md5.txt' ! -name 'checksums-sha1.txt' -print0 \
+          | sort -z | xargs -0 -r md5sum > checksums-md5.txt
+        find . -type f ! -name 'checksums-md5.txt' ! -name 'checksums-sha1.txt' -print0 \
+          | sort -z | xargs -0 -r sha1sum > checksums-sha1.txt
     - name: '上传到 Release'
+      if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
         files: 'release/*'
         generate_release_notes: true
         fail_on_unmatched_files: false

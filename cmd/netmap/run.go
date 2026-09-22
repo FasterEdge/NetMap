@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -61,6 +62,9 @@ func run(ctx context.Context, prog string, args []string, logger *log.Logger) er
 	}
 	cfg, err := config.Parse(prog, nil, args, io.Discard)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return fmt.Errorf("parse flags: %w", err)
 	}
 

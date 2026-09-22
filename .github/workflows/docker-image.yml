@@ -7,8 +7,10 @@ on:
       - main
     tags:
       - 'v*'
+  release:
+    types: [published, released]
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   docker-build:
@@ -35,3 +37,10 @@ jobs:
         path: 'netmap-image.tar.gz'
         if-no-files-found: 'warn'
         retention-days: 14
+    - name: '上传镜像包到 Release'
+      if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+        files: 'netmap-image.tar.gz'
+        fail_on_unmatched_files: false
