@@ -20,7 +20,7 @@ jobs:
     - name: 'Go 鍗曞厓娴嬭瘯'
       uses: actions/setup-go@v5
       with:
-        go-version: '1.25'
+        go-version: '1.26'
     - name: '杩愯娴嬭瘯'
       run: go test ./...
     - name: '静态检查 go vet'
