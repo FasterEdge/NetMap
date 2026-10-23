@@ -8,9 +8,11 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -60,6 +62,9 @@ func run(ctx context.Context, prog string, args []string, logger *log.Logger) er
 	}
 	cfg, err := config.Parse(prog, nil, args, io.Discard)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return fmt.Errorf("parse flags: %w", err)
 	}
 
@@ -119,6 +124,20 @@ func run(ctx context.Context, prog string, args []string, logger *log.Logger) er
 			MaxIdleConns:        32,
 			MaxIdleConnsPerHost: 4,
 			IdleConnTimeout:     90 * time.Second,
+			// DNS 重绑定 + redirect 绕过防御: 每次拨号(含 redirect 目标)都做
+			// IP-class 检查(逻辑集中在 source.ValidationPolicy.CheckDialHost)。
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				host, port, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+				// 解析 + 校验后 pin IP 拨号(防 DNS 重绑定二次解析绕过)
+				dialAddr, err := cfg.Policy.ResolveDialAddr(ctx, host, port)
+				if err != nil {
+					return nil, err
+				}
+				return (&net.Dialer{}).DialContext(ctx, network, dialAddr)
+			},
 		},
 	}
 

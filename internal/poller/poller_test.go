@@ -61,6 +61,11 @@ func TestNewAppliesDefaults(t *testing.T) {
 	if p.cfg.MaxResponseBytes <= 0 {
 		t.Fatal("MaxResponseBytes defaulted")
 	}
+	// HTTPClient.Timeout==0(Go 零值)必须被 fail-safe 到默认值,
+	// 否则 WithTimeout(ctx, 0) 立即取消导致所有 poll 静默失败。
+	if p.cfg.HTTPClient.Timeout != 30*time.Second {
+		t.Fatalf("HTTPClient.Timeout must default to 30s, got %s", p.cfg.HTTPClient.Timeout)
+	}
 }
 
 func TestPollerPollsEachSource(t *testing.T) {
