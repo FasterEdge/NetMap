@@ -7,7 +7,7 @@ WORKDIR /src
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/app ./cmd/netmap
 
-FROM alpine:3.20
+FROM alpine:3.24
 RUN addgroup -S app && adduser -S -G app app && \
     mkdir -p /data && chown app:app /data
 COPY --from=build /out/app /usr/local/bin/app
