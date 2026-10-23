@@ -131,6 +131,16 @@ func (p ValidationPolicy) classifyIP(ip net.IP) DisallowReason {
 	}
 	return ""
 }
+
+// CheckResolvedIP reports the deny reason for an IP resolved from a hostname
+// at connection time, closing the DNS-rebinding gap: hostnames pass Validate
+// without resolution, so a name that later resolves to a private/loopback/
+// link-local/multicast address would otherwise slip through the deny-by-default
+// policy. It mirrors the IP-literal path of Validate.
+func (p ValidationPolicy) CheckResolvedIP(ip net.IP) DisallowReason {
+	return p.classifyIP(ip)
+}
+
 func normalise(u *url.URL, port string) string {
 	host := u.Host
 	// Trim any default port so callers always see the canonical form.
