@@ -62,6 +62,17 @@ func TestRunFailsOnBadFlags(t *testing.T) {
 	}
 }
 
+// TestRunHelpReturnsNil verifies the CLI help paths exit successfully
+// instead of being reported as a parse failure.
+func TestRunHelpReturnsNil(t *testing.T) {
+	logger := log.New(io.Discard, "", 0)
+	ctx := context.Background()
+	err := run(ctx, "netmap", []string{"-h"}, logger)
+	if err != nil {
+		t.Fatalf("help returned %v", err)
+	}
+}
+
 // TestRunFailsOnLoopbackWithoutFlag verifies the deny-by-default policy
 // rejects loopback without -allow-private-nodes.
 func TestRunFailsOnLoopbackWithoutFlag(t *testing.T) {
