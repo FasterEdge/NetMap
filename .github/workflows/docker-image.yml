@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: 'Go 鍗曞厓娴嬭瘯'
+    - name: 'Go 单元测试'
       uses: actions/setup-go@v5
       with:
         go-version: '1.26'
-    - name: '杩愯娴嬭瘯'
+    - name: '运行测试'
       run: go test ./...
     - name: '静态检查 go vet'
       run: go vet ./...
