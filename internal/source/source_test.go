@@ -1,7 +1,9 @@
 package source
 
 import (
+	"context"
 	"errors"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -99,6 +101,63 @@ func TestPolicyAllowListOverridesDefaults(t *testing.T) {
 	// A different host should still be rejected for being loopback.
 	if _, err := policy.Validate("http://127.0.0.1:7000"); err == nil {
 		t.Fatal("expected deny for non-allowlisted loopback")
+	}
+}
+
+func TestPolicyCheckResolvedIP(t *testing.T) {
+	p := DefaultPolicy()
+	for _, tc := range []struct {
+		ip     string
+		reason DisallowReason
+	}{
+		{"10.0.0.1", ReasonPrivate},
+		{"127.0.0.1", ReasonLoopback},
+		{"169.254.169.254", ReasonLinkLocal},
+		{"239.0.0.1", ReasonMulticast},
+	} {
+		if reason := p.CheckResolvedIP(net.ParseIP(tc.ip)); reason != tc.reason {
+			t.Fatalf("CheckResolvedIP(%s) = %v, want %v", tc.ip, reason, tc.reason)
+		}
+	}
+	if reason := p.CheckResolvedIP(net.ParseIP("8.8.8.8")); reason != "" {
+		t.Fatalf("public IP denied: %v", reason)
+	}
+	if reason := PermissivePolicy().CheckResolvedIP(net.ParseIP("10.0.0.1")); reason != "" {
+		t.Fatalf("permissive denied private: %v", reason)
+	}
+}
+
+func TestCheckDialHost(t *testing.T) {
+	ctx := context.Background()
+	p := DefaultPolicy()
+	// IP literal 私网/回环拒绝(防 redirect 到内网 IP literal 绕过 Validate)
+	if err := p.CheckDialHost(ctx, "10.0.0.1"); err == nil {
+		t.Fatal("expected private IP literal denied")
+	} else if reasonOf(err) != ReasonPrivate {
+		t.Fatalf("private literal reason = %v", reasonOf(err))
+	}
+	if err := p.CheckDialHost(ctx, "127.0.0.1"); err == nil {
+		t.Fatal("expected loopback IP literal denied")
+	}
+	// IP literal 公网放行
+	if err := p.CheckDialHost(ctx, "8.8.8.8"); err != nil {
+		t.Fatalf("public IP denied: %v", err)
+	}
+	// DefaultPolicy 下 hostname 解析到回环拒绝(localhost → 127.0.0.1),
+	// 验证 2503 修复的条件错误(AllowedHosts!=nil 才检查)已被纠正。
+	if err := p.CheckDialHost(ctx, "localhost"); err == nil {
+		t.Fatal("expected localhost denied under DefaultPolicy")
+	} else if reasonOf(err) != ReasonLoopback {
+		t.Fatalf("localhost reason = %v err=%v", reasonOf(err), err)
+	}
+	// Permissive 放行私网
+	if err := PermissivePolicy().CheckDialHost(ctx, "10.0.0.1"); err != nil {
+		t.Fatalf("permissive denied private: %v", err)
+	}
+	// 白名单命中放行(覆盖 IP class 规则)
+	wl := ValidationPolicy{AllowedHosts: map[string]struct{}{"edge.lab": {}}}
+	if err := wl.CheckDialHost(ctx, "edge.lab"); err != nil {
+		t.Fatalf("allowlist denied: %v", err)
 	}
 }
 
